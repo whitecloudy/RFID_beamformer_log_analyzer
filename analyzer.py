@@ -96,8 +96,38 @@ def channel_analyzer(channelList, antNum):
         antAvg.append(np.mean(np.array(ant)))
         antStd.append(np.std(np.array(ant)))
 
+    print("Before Pruing")
+    print(len(antData[0]))
     print(antAvg)
+    for i in antAvg:
+        print(abs(i), " ",end='')
+    print()
     print(antStd)
+    print()
+
+    modAntData = []
+
+    for antIdx in range(len(antData)):
+        modAntData.append([])
+        for cha in antData[antIdx]:
+            if abs(cha-antAvg[antIdx]) < antStd[antIdx]:
+                modAntData[antIdx].append(cha)
+
+    antAvg = []
+    antStd = []
+    for ant in modAntData:
+        antAvg.append(np.mean(np.array(ant)))
+        antStd.append(np.std(np.array(ant)))
+
+    print("After Pruing")
+    print(len(modAntData[0]))
+    print(antAvg)
+    for i in antAvg:
+        print(abs(i), " ",end='')
+    print()
+    print(antStd)
+
+
 
 if __name__ == '__main__':
     dataList = log_data_filter(log_parser('log.csv',4), 0x5555)
