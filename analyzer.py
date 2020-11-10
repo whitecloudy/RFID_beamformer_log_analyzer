@@ -53,9 +53,9 @@ def log_data_filter(dataList, RN16):
 
 def channel_estimator(phaseData, tagSignal):
     phaseData = np.matrix(phaseData)
-    tagSignal = np.matrix(tagSignal)
+    tagSignal = np.matrix(tagSignal).T
 
-    channel = np.linalg.inv(phaseData) * tagSignal.T
+    channel = np.linalg.inv(phaseData) * tagSignal
     
 
     return channel.T.tolist()[0]
@@ -82,6 +82,34 @@ def data_analyzer(logData, antNum):
 
     return channelList
 
+def data_analyzer_withKalman(logData, antNum):
+    firstPush = antNum
+    phaseData = deque([])
+    tagSignal = deque([])
+    channelList = []
+
+    for data in logData[0:antNum]:
+        phaseData.append(data[0])
+        tagSignal.append(data[1])
+
+    channelList.append(channel_estimator(phaseData, tagSignal))
+
+    kalman_estimator = kalman(np.matrix(channelList[0]).T,
+                        1 * np.identity(antNum), 
+                        0.1 * np.identity(antNum), 
+                        0.1 * np.matrix([1, 1, 1, 1]).T)
+    
+    for data in logData[antNum:]:
+        phaseData.popleft()
+        phaseData.append(data[0])
+        tagSignal.popleft()
+        tagSignal.append(data[1])
+
+        channelList.append(kalman_estimator.process(np.matrix(tagSignal).T, np.identity(antNum),phaseData))
+
+    return channelList
+
+
 def channel_analyzer(channelList, antNum):
     antData = []
     for i in range(antNum):
@@ -97,6 +125,7 @@ def channel_analyzer(channelList, antNum):
         antAvg.append(np.mean(np.array(ant)))
         antStd.append(np.std(np.array(ant)))
 
+    """
     print("Before Pruing")
     print(len(antData[0]))
     print(antAvg)
@@ -105,6 +134,7 @@ def channel_analyzer(channelList, antNum):
     print()
     print(antStd)
     print()
+    """
 
     modAntData = []
 
@@ -119,7 +149,7 @@ def channel_analyzer(channelList, antNum):
     for ant in modAntData:
         antAvg.append(np.mean(np.array(ant)))
         antStd.append(np.std(np.array(ant)))
-
+    """
     print("After Pruing")
     print(len(modAntData[0]))
     print(antAvg)
@@ -127,10 +157,15 @@ def channel_analyzer(channelList, antNum):
         print(abs(i), " ",end='')
     print()
     print(antStd)
+    """
 
 
 
 if __name__ == '__main__':
     dataList = log_data_filter(log_parser('log.csv',4), 0x5555)
     channelList = data_analyzer(dataList, 4)
+    kalmanChannelList = data_analyzer_withKalman(dataList, 4)
     channel_analyzer(channelList, 4)
+    for i, k in enumerate(kalmanChannelList):
+        c = channelList[i]
+        print(k, c)
